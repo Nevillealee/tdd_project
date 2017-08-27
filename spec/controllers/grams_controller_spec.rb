@@ -3,6 +3,14 @@ require 'rails_helper'
 RSpec.describe GramsController, type: :controller do
   
   describe "grams#destroy action" do
+    it "shouldnt let users who didnt create the gram to destroy it" do
+      gram = FactoryGirl.create(:gram)
+      user =FactoryGirl.create(:user)
+      sign_in user
+      delete :destroy, params: { id: gram.id }
+      expect(response).to have_http_status(:forbidden)
+    end
+      
     it "shouldn't let unauthenticated users destroy a gram" do
       gram = FactoryGirl.create(:gram)
       delete :destroy, params: { id: gram.id }
@@ -11,6 +19,7 @@ RSpec.describe GramsController, type: :controller do
     
     it "should allow a user to destroy grams" do
       gram = FactoryGirl.create(:gram)
+       sign_in gram.user
       delete :destroy, params: {id: gram.id}
       expect(response).to redirect_to root_path
       gram = Gram.find_by_id(gram.id)
@@ -18,12 +27,22 @@ RSpec.describe GramsController, type: :controller do
     end
     
     it "should return a 404 message if we cant find the gram with the id specified" do
+      user = FactoryGirl.create(:user)
+      sign_in user
       delete :destroy, params: {id: 'spaceghost'}
       expect(response).to have_http_status(:not_found)
     end
   end
   
   describe "grams#update action" do
+    it "shouldnt let users who didnt create the gram update it" do
+      gram = FactoryGirl.create(:gram)
+      user = FactoryGirl.create(:user)
+      sign_in user
+      patch :update, params: { id: gram.id, gram: { message: 'wahoo' } }
+      expect(response).to have_http_status(:forbidden)
+    end
+    
     it "shouldn't let unauthenticated users update a gram" do
       gram = FactoryGirl.create(:gram)
       patch :update, params: { id: gram.id }
@@ -32,6 +51,7 @@ RSpec.describe GramsController, type: :controller do
     
     it "should allow users to successfully update grams" do
       gram = FactoryGirl.create(:gram, message: "Initial Value")
+      sign_in gram.user
       patch :update, params: { id: gram.id, gram: { message: 'Changed' } }
       expect(response).to redirect_to root_path
       gram.reload
@@ -39,12 +59,17 @@ RSpec.describe GramsController, type: :controller do
     end
     
     it "should have http 404 error if the gram cannot be found" do
+      user = FactoryGirl.create(:user)
+      sign_in user
+      
       patch :update, params: { id: "2percent?", gram: { message: 'Changed' } }
       expect(response).to have_http_status(:not_found)
     end
     
     it "should render the edit form with an http status of unprocessable_entity" do
       gram = FactoryGirl.create(:gram, message: "Initial Value")
+      sign_in gram.user
+      
       patch :update, params: { id: gram.id, gram: { message: ''}}
       expect(response).to have_http_status(:unprocessable_entity)
       gram.reload
@@ -53,6 +78,14 @@ RSpec.describe GramsController, type: :controller do
   end
 
   describe "grams#edit action" do
+    it "shouldn't let a user who did not create the gram edit a gram" do
+      gram = FactoryGirl.create(:gram)
+      user = FactoryGirl.create(:user)
+      sign_in user
+      get :edit, params: { id: gram.id }
+      expect(response).to have_http_status(:forbidden)
+    end
+    
     it "shouldn't let unauthenticated users edit a gram" do
       gram = FactoryGirl.create(:gram)
       get :edit, params: { id: gram.id }
@@ -60,14 +93,18 @@ RSpec.describe GramsController, type: :controller do
     end
     
     it "should successfully show the edit form if the gram is found" do
-        gram = FactoryGirl.create(:gram)
-        get :edit, params: { id: gram.id }
-        expect(response).to have_http_status(:success)
+      gram = FactoryGirl.create(:gram)
+      sign_in gram.user
+      get :edit, params: { id: gram.id }
+      expect(response).to have_http_status(:success)
     end 
 
     it "should return a 404 error message if the gram is not found" do
-        get :edit, params: { id: "Bodak?" }
-        expect(response).to have_http_status(:not_found)
+      user = FactoryGirl.create(:user)
+      sign_in user
+      
+      get :edit, params: { id: "Bodak?" }
+      expect(response).to have_http_status(:not_found)
     end
   end
 
